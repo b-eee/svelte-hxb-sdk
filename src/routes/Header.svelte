@@ -2,6 +2,13 @@
 	import { page } from '$app/stores';
 	import logo from '$lib/images/svelte-logo.svg';
 	import github from '$lib/images/github.svg';
+	import { goto } from '$app/navigation';
+	const handleLogin = () => {
+		goto('/auth/login');
+	};
+	const handleLogout = () => {
+		goto('/auth/login');
+	};
 </script>
 
 <header>
@@ -9,30 +16,21 @@
 		<div class="corner m-3" />
 		<div class="flex gap-4">
 			<div class="avatar m-3" />
-			<a href="/auth/login">Log out</a>
-			<a href="/auth/login">Log in</a>
+			<button
+				class="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-xs px-4 py-2 rounded shadow hover:shadow-md outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+				type="button"
+				on:click={handleLogout}
+			>
+				Log out
+			</button>
+			<button
+				class="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-xs px-4 py-2 rounded shadow hover:shadow-md outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+				type="button"
+				on:click={handleLogin}
+				>Log in
+			</button>
 		</div>
 	</div>
-
-	<!-- <nav>
-		<svg viewBox="0 0 2 3" aria-hidden="true">
-			<path d="M0,0 L1,2 C1.5,3 1.5,3 2,3 L2,0 Z" />
-		</svg>
-		<ul>
-			<li class:active={$page.url.pathname === '/'}>
-				<a href="/">Home</a>
-			</li>
-			<li class:active={$page.url.pathname === '/about'}>
-				<a href="/about">About</a>
-			</li>
-			<li class:active={$page.url.pathname.startsWith('/sverdle')}>
-				<a href="/sverdle">Sverdle</a>
-			</li>
-		</ul>
-		<svg viewBox="0 0 2 3" aria-hidden="true">
-			<path d="M0,0 L0,3 C0.5,3 0.5,3 1,2 L2,0 Z" />
-		</svg>
-	</nav> -->
 </header>
 
 <style>
@@ -51,7 +49,7 @@
 
 	.corner {
 		width: 180px;
-		height: 40px;
+		height: 30px;
 		background-image: url('https://hxb-wp-prod.s3.ap-northeast-1.amazonaws.com/wp-content/uploads/2022/03/18170050/logo2022-bk.svg');
 		background-size: contain;
 		background-repeat: no-repeat;

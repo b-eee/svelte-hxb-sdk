@@ -1,11 +1,20 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import type {
+		Workspaces,
+		WorkSpacesInfo
+	} from '@hexabase/hexabase-js/dist/lib/types/workspace/response';
+
 	import { workspaceService } from './+page';
 	// import Workspace from 'hexabase/hexabase-js/dist/lib/types/workspace/response.d.ts';
 
 	const fetchData = (async () => {
-		const workspaces = await workspaceService.getWorkspaces();
+		const workspaces: Workspaces = await workspaceService.getWorkspaces();
 		return workspaces;
 	})();
+	const handleClick = (row: WorkSpacesInfo) => {
+		goto(`workspaces/${row.workspace_id}`);
+	};
 </script>
 
 <svelte:head>
@@ -41,7 +50,10 @@
 
 			<tbody>
 				{#each workspaces.workspaces as workspace}
-					<tr>
+					<tr
+						class="cursor-pointer hover:bg-green-200 ease-in duration-300"
+						on:click={() => handleClick(workspace)}
+					>
 						<td
 							class="border-t-0 px-6 align-middle border-l-0 border-r-0 text-xs whitespace-nowrap p-4 text-left text-blueGray-700 "
 						>
