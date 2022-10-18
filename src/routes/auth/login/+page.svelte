@@ -22,7 +22,7 @@
 	};
 </script>
 
-<div class="flex items-center bg-white dark:bg-gray-900">
+<div class="flex flex-col items-center bg-white dark:bg-gray-900">
 	<div class="container mx-auto">
 		<div class="max-w-md mx-auto my-10">
 			<div class="text-center">
@@ -71,14 +71,14 @@
 						<button
 							on:click={handleLogin}
 							type="button"
-							class="w-full px-3 py-4 text-white bg-indigo-500 rounded-md focus:bg-indigo-600 focus:outline-none"
+							class="w-full px-3 py-4 text-white bg-green-600 rounded-md hover:bg-green-500 ease-out duration-300 focus:bg-green-500 focus:outline-none"
 							>Sign in</button
 						>
 					</div>
 					<p class="text-sm text-center text-gray-400">
 						Don&#x27;t have an account yet? <a
 							href="#!"
-							class="text-indigo-400 focus:outline-none focus:underline focus:text-indigo-500 dark:focus:border-indigo-800"
+							class="text-green-600 focus:outline-none focus:underline focus:text-green-500 dark:focus:border-indigo-800"
 							>Sign up</a
 						>.
 					</p>
