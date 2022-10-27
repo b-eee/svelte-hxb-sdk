@@ -5,6 +5,7 @@
 	import { error, redirect } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 	import { userService } from './+page';
+	import LoadingComp from '$lib/images/components/icon/LoadingComp.svelte';
 	let showPassword = false;
 	$: type = showPassword ? 'text' : 'password';
 	let loginInput = {
@@ -12,12 +13,16 @@
 		password: ''
 	};
 
+	export let loading = false;
+
 	function typeAction(node: HTMLInputElement) {
 		node.type = type;
 	}
 
 	const handleLogin = async () => {
+		loading = true;
 		const token = await userService.login(loginInput.email, loginInput.password);
+		loading = false;
 		token && goto('/workspaces');
 	};
 </script>
@@ -71,9 +76,13 @@
 						<button
 							on:click={handleLogin}
 							type="button"
-							class="w-full px-3 py-4 text-white bg-green-600 rounded-md hover:bg-green-500 ease-out duration-300 focus:bg-green-500 focus:outline-none"
-							>Sign in</button
+							class="flex w-full px-3 py-4 text-white bg-green-600 rounded-md hover:bg-green-500 ease-out duration-300 focus:bg-green-500 focus:outline-none"
 						>
+							{#if loading}
+								<LoadingComp {loading} />
+							{/if}
+							<span class="flex-1 ease-in-out duration-500">Sign in</span>
+						</button>
 					</div>
 					<p class="text-sm text-center text-gray-400">
 						Don&#x27;t have an account yet? <a

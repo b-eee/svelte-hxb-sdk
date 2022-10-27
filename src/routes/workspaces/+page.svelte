@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import Paragraph from '$lib/components/skeleton/Paragraph.svelte';
 	import type {
 		Workspaces,
 		WorkSpacesInfo
@@ -30,7 +31,9 @@
 
 <div class="block w-full overflow-x-auto">
 	{#await fetchData}
-		<p>...fetching data</p>
+		<div class="w-full h-full bg-white">
+			<Paragraph />
+		</div>
 	{:then workspaces}
 		<table class="items-center bg-transparent w-full border-collapse ">
 			<thead>

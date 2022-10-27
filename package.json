@@ -12,8 +12,10 @@
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^4.5.0",
+		"@hexabase/hexabase-js": "^1.0.18",
 		"@neoconfetti/svelte": "^1.0.0",
 		"@rgossiaux/svelte-headlessui": "^1.0.2",
+		"@rgossiaux/svelte-heroicons": "^0.1.2",
 		"@sveltejs/adapter-auto": "next",
 		"@sveltejs/kit": "next",
 		"@types/cookie": "^0.5.1",
@@ -34,8 +36,5 @@
 		"typescript": "^4.7.4",
 		"vite": "^3.1.0"
 	},
-	"type": "module",
-	"dependencies": {
-		"@hexabase/hexabase-js": "^1.0.12"
-	}
+	"type": "module"
 }
