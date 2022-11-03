@@ -1,9 +1,8 @@
 import { createClient, HexabaseClient } from '@hexabase/hexabase-js';
 
-let initHxbClt = {} as HexabaseClient;
-
 const url = import.meta.env.VITE_URL;
 async function login(email: string, password: string) {
+	console.log('import.meta', import.meta);
 	let user = {} as any;
 	const hexabase = await createClient({
 		url,
@@ -11,7 +10,6 @@ async function login(email: string, password: string) {
 		email,
 		password
 	});
-	initHxbClt = hexabase;
 	const { token, error } = await hexabase.auth.login({ email, password });
 	if (token && !error) {
 		const { userInfo, error } = await hexabase.users.get(token);
@@ -35,6 +33,5 @@ function register() {
 export const userService = {
 	login,
 	logout,
-	register,
-	initHxbClt
+	register
 };

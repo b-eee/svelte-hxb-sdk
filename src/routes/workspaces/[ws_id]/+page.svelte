@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import List from '$lib/components/skeleton/List.svelte';
 	import Paragraph from '$lib/components/skeleton/Paragraph.svelte';
 	import SelectIcon from '$lib/images/SelectIcon.svelte';
 	import type { ItemFieldType } from '$lib/type/item';
@@ -28,6 +29,7 @@
 		ChevronDownIcon,
 		ChevronUpIcon
 	} from '@rgossiaux/svelte-heroicons/outline';
+	import { onMount } from 'svelte';
 	import { applicationService, datastoreService, itemsService } from './+page';
 
 	const { ws_id } = $page.params;
@@ -41,6 +43,9 @@
 	let fieldsLayout = [];
 	let itemFields: ItemFieldType[] = [];
 	let itemFieldsExceptFile: any = [];
+	let curItemDetail = [] as any;
+	let itemDetailLoading = false;
+	let statusOption = [] as any;
 
 	let getItemsParameters = {
 		use_or_condition: false,
@@ -55,6 +60,20 @@
 		return_number_value: true,
 		format: '',
 		include_linked_items: true
+	};
+
+	const getStatuses = async () => {
+		statusOption = await datastoreService.getStatuses(curDatastoreId);
+		console.log('statusOption', statusOption);
+	};
+
+	$: curDatastoreId && getStatuses();
+
+	const getStatusNameById = (displayName: string) => {
+		const name = statusOption.find((opt: any) => opt.status_id === displayName).displayed_name;
+		console.log('displayName', displayName);
+		console.log('name', name);
+		return name;
 	};
 
 	const fetchAppAndDs = (async () => {
@@ -88,18 +107,13 @@
 	$: curDatastoreId && getDsDetail();
 
 	const getItemDetail = async (ds_id: string, item_id: string, project_id: string) => {
-		const dsDetail = await itemsService.getItemDetail(
-			ds_id,
-			item_id,
-			project_id,
-			getItemDetailParams
-		);
-		itemFields = dsDetail.fields;
-		itemFieldsExceptFile = itemFields.filter((i) => i.data_type !== 'file');
-		console.log('itemFieldsExceptFile', itemFieldsExceptFile);
-	};
+		itemDetailLoading = true;
+		const res = await itemsService.getItemDetail(ds_id, item_id, project_id, getItemDetailParams);
 
-	$: curDatastoreId && getDsDetail();
+		curItemDetail = res.field_values;
+		console.log(curItemDetail);
+		itemDetailLoading = false;
+	};
 
 	const handleSelectApp = (e: CustomEvent<any>) => {
 		console.log(e.detail);
@@ -124,10 +138,12 @@
 	};
 </script>
 
-<div class="grid grid-cols-12 h-full gap-8 px-8 py-2">
-	<div class="col-span-3 flex flex-col gap-8">
+<div class="h-full gap-8 px-8 py-2 flex">
+	<div class="w-fit flex flex-col gap-8 shadow-md">
 		<div class="projects w-72 h-fit-content">
-			<p class="text-sm font-semibold p-2">Projects</p>
+			<div class="px-5 py-4 border-b border-gray-100">
+				<div class="font-semibold text-gray-800">Datastore Items</div>
+			</div>
 			{#await fetchAppAndDs}
 				<div class="w-full h-full bg-white">
 					<Paragraph />
@@ -139,10 +155,10 @@
 							value={currentApp}
 							on:change={(e) => handleSelectApp(e)}
 							horizontal={false}
-							class="bg-slate-100 cursor-pointer shadow-md rounded-md overflow-hidden"
+							class="bg-slate-100 cursor-pointer rounded-md overflow-hidden"
 						>
 							<ListboxButton
-								class="relative w-full cursor-pointer rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm"
+								class="relative w-full cursor-pointer bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm"
 							>
 								<span class="block truncate">{currentApp?.name}</span>
 								<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -184,7 +200,7 @@
 													</span>
 												{/if}
 											</div>
-										</ListboxOption>
+										</ListboxOption>Datastores items
 									{/each}
 								</ListboxOptions>
 							</Transition>
@@ -196,7 +212,7 @@
 			{/await}
 		</div>
 		<div class="datastores h-1/2 w-64">
-			<Disclosure let:open class="cursor-pointer shadow-md rounded-md overflow-hidden">
+			<Disclosure let:open class="cursor-pointer overflow-hidden">
 				<DisclosureButton
 					class="flex w-full justify-between rounded-lg bg-white px-4 py-2 text-left text-sm font-medium hover:slate-100 focus:outline-none focus-visible:ring focus-visible:ring-slate-500 focus-visible:ring-opacity-75"
 				>
@@ -223,72 +239,100 @@
 		</div>
 	</div>
 
-	<div class="col-span-9">
-		<div class="grid grid-cols-12">
-			<div class="col-span-9">
-				<p class="text-sm font-semibold p-2">Datastore items</p>
-				<table class="table-auto w-full">
-					{#if items}
-						<thead
-							class="text-xs text-gray-700 uppercase bg-emerald-400 dark:bg-gray-700 dark:text-gray-400"
-						>
-							<tr>
-								{#each itemFieldsExceptFile as itemFieldExceptFile}
-									<th scope="col" class="py-3"> {itemFieldExceptFile.display_name} </th>
-								{/each}
-							</tr>
-						</thead>
-						<tbody class="bg-emerald-50 text-center">
-							{#each items as item}
-								<tr
-									class="dark:bg-gray-800 dark:border-gray-700 text-left cursor-pointer hover:bg-amber-100"
-									on:keydown={() => handleClickRow(item)}
-									on:click={() => handleClickRow(item)}
+	<div class="mx-3 flex-1">
+		{#if loadingItems}
+			<Paragraph />
+		{:else}
+			<div class="grid grid-cols-12 gap-4">
+				<div class="col-span-9">
+					<div class="px-5 py-4 border-b border-gray-100">
+						<div class="font-semibold text-gray-800">Datastore items</div>
+					</div>
+					<div class="shadow-md px-6 py-3">
+						<table class="table-auto w-full bg-white rounded-sm">
+							{#if items}
+								<thead
+									class="text-left text-xs font-semibold uppercase text-gray-400 dark:text-white bg-gray-50 dark:bg-emerald-600"
 								>
-									{#each itemFieldsExceptFile as itemFieldExceptFile}
-										<td class="p-2">
-											{item[itemFieldExceptFile.id]}
-										</td>
+									<tr>
+										{#each itemFieldsExceptFile as itemFieldExceptFile}
+											<th scope="col" class="py-3 px-"> {itemFieldExceptFile.display_name} </th>
+										{/each}
+									</tr>
+								</thead>
+								<tbody>
+									{#each items as item}
+										<tr
+											class="border-t-0 px-6 align-middle text-xs whitespace-nowrap p-4 text-blueGray-700 dark:bg-gray-800 dark:border-gray-700 text-left cursor-pointer hover:bg-amber-100"
+											on:keydown={() => handleClickRow(item)}
+											on:click={() => handleClickRow(item)}
+										>
+											{#each itemFieldsExceptFile as itemFieldExceptFile}
+												<td class="p-2 border-b-stone-500">
+													{item[itemFieldExceptFile.id]}
+												</td>
+											{/each}
+										</tr>
 									{/each}
-								</tr>
-							{/each}
-						</tbody>
-					{:else}
-						<div class="w-full h-full bg-white">
-							<Paragraph />
-						</div>
-					{/if}
-				</table>
-			</div>
-			<div class="col-span-3 w-full max-w-md px-2 py-16 sm:px-0">
-				Items detail
-				<TabGroup>
-					<TabList class="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
-						<Tab let:selected class="px-3">
-							<button
-								class={`
-              'w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2'
-			                ${
-												selected
-													? 'bg-white shadow'
-													: 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
-											}
+								</tbody>
+							{:else}
+								<div class="w-full h-full bg-white">
+									<Paragraph />
+								</div>
+							{/if}
+						</table>
+					</div>
+				</div>
+				<div class="col-span-3 w-full max-w-md px-2 sm:px-0 ">
+					<div class="px-5 py-4 border-b border-gray-100">
+						<div class="font-semibold text-gray-800">Item detail</div>
+					</div>
+					<div class="shadow-md h-full">
+						<TabGroup>
+							<TabList class="flex space-x-1 rounded-xl px-2 py-3">
+								<Tab let:selected class="px-3">
+									<button
+										class={`
+              'w-full rounded-lg py-2.5 text-sm font-bold leading-5 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2'
+			                ${selected ? 'bg-white shadow' : 'text-orange-500 '}
 						`}>Detail</button
-							>
-						</Tab>
-						<Tab>Files</Tab>
-					</TabList>
-					<TabPanels>
-						<TabPanel
-							class="rounded-xl bg-white p-3
+									>
+								</Tab>
+								<Tab>Files</Tab>
+							</TabList>
+							<TabPanels>
+								<TabPanel
+									class="rounded-xl bg-white p-3
                 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2"
-							>Content 1</TabPanel
-						>
-						<TabPanel>Content 2</TabPanel>
-					</TabPanels>
-				</TabGroup>
+								>
+									{#if itemDetailLoading}
+										<List />
+									{:else}
+										<ul>
+											{#each Object.keys(curItemDetail) as i (i)}
+												{#if ['users', 'file', 'status'].includes(curItemDetail[i].dataType) === false}
+													<li class="px-3 py-2 bg-slate-100">{curItemDetail[i].field_name}</li>
+													<li class="px-3 py-2">{curItemDetail[i].value}</li>
+												{:else if curItemDetail[i].dataType === 'status'}
+													<li class="px-3 py-2 bg-slate-100">Staus</li>
+													<li class="px-3 py-2">{getStatusNameById(curItemDetail[i].value)}</li>
+												{:else if curItemDetail[i].dataType === 'user'}
+													<li class="px-3 py-2 bg-slate-100">Users</li>
+													{#each curItemDetail[i].value as userVal (userVal.user_id)}
+														<li class="px-3 py-2">{userVal.user_name}</li>
+													{/each}
+												{/if}
+											{/each}
+										</ul>
+									{/if}
+								</TabPanel>
+								<TabPanel>Content 2</TabPanel>
+							</TabPanels>
+						</TabGroup>
+					</div>
+				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 </div>
 

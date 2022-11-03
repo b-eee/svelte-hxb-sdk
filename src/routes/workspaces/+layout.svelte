@@ -8,8 +8,8 @@
 	<header>
 		<Header />
 	</header>
-	<div class="flex-1 grid grid-cols-12">
-		<nav class="col-span-2">
+	<div class="flex-1 flex">
+		<nav class="max-w-md">
 			<div class="px-3 py-4 h-full overflow-y-auto rounded bg-gray-50 dark:bg-gray-800">
 				<ul class="space-y-2">
 					<li>
@@ -51,7 +51,7 @@
 				</ul>
 			</div>
 		</nav>
-		<main class="col-span-10">
+		<main class="flex-1">
 			<slot />
 		</main>
 	</div>

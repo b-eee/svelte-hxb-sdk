@@ -5,7 +5,7 @@
 	import { error, redirect } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 	import { userService } from './+page';
-	import LoadingComp from '$lib/images/components/icon/LoadingComp.svelte';
+	import LoadingComp from '$lib/components/skeleton/LoadingComp.svelte';
 	let showPassword = false;
 	$: type = showPassword ? 'text' : 'password';
 	let loginInput = {
