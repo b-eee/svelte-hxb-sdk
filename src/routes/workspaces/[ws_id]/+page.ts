@@ -8,6 +8,7 @@ import type {
 	GetItemsPl,
 	ItemActionParameters
 } from '@hexabase/hexabase-js/dist/lib/types/item';
+import type { ItemFileAttachmentPl } from '@hexabase/hexabase-js/dist/lib/types/storage';
 export const applicationService = {
 	getAppAndDs,
 	createApp,
@@ -24,7 +25,15 @@ export const datastoreService = {
 
 export const itemsService = {
 	getItems,
-	getItemDetail
+	getItemDetail,
+	deleteItem,
+	updateItem
+};
+
+export const storageService = {
+	getFile,
+	createFile,
+	deleteFile
 };
 
 const url = import.meta.env.VITE_URL;
@@ -185,5 +194,23 @@ async function updateItem(
 		itemId,
 		itemActionParameters
 	);
+	return data;
+}
+
+async function getFile(getDownloadFileId: string) {
+	const hexabase = await initHxbClient();
+	const { file, error } = await hexabase.storage?.getFile(getDownloadFileId);
+	return file;
+}
+
+async function createFile(payload: ItemFileAttachmentPl) {
+	const hexabase = await initHxbClient();
+	const { data, error } = await hexabase.storage.createFile(payload);
+	return data;
+}
+
+async function deleteFile(fileId: string) {
+	const hexabase = await initHxbClient();
+	const { data, error } = await hexabase.storage.delete({ fileId });
 	return data;
 }
