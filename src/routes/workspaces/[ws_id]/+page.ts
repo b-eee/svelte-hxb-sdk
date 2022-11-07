@@ -12,7 +12,8 @@ import type { ItemFileAttachmentPl } from '@hexabase/hexabase-js/dist/lib/types/
 export const applicationService = {
 	getAppAndDs,
 	createApp,
-	getApplication
+	getApplication,
+	getTemplates
 };
 
 export const datastoreService = {
@@ -27,7 +28,9 @@ export const itemsService = {
 	getItems,
 	getItemDetail,
 	deleteItem,
-	updateItem
+	updateItem,
+	createItem,
+	createItemId
 };
 
 export const storageService = {
@@ -65,6 +68,13 @@ async function getApplication(projectId: string) {
 	const hexabase = await initHxbClient();
 	const { project, error } = await hexabase.applications.get(projectId);
 	return project;
+}
+
+//get create application templates
+async function getTemplates() {
+	const hexabase = await initHxbClient();
+	const { getTemplates, error } = await hexabase.applications.getTemplates();
+	return getTemplates;
 }
 
 async function getFields(datastoreId: string, projectId: string) {

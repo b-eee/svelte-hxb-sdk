@@ -9,8 +9,9 @@
 		ListboxOptions,
 		Transition
 	} from '@rgossiaux/svelte-headlessui';
-	import { CheckIcon, ChevronDownIcon } from '@rgossiaux/svelte-heroicons/outline';
+	import { CheckIcon, ChevronDownIcon, TrashIcon } from '@rgossiaux/svelte-heroicons/outline';
 	import { onMount } from 'svelte';
+	import { getClose } from 'svelte-dialogs';
 	import { datastoreService, itemsService, storageService } from '../+page';
 
 	export let isUpdateOpen: boolean;
@@ -19,14 +20,30 @@
 	export let item: any = {};
 	export let title = '';
 	export let curItemDetail: any = {};
+
+	let getItemsParameters: any = {
+		use_or_condition: false,
+		sort_field_id: '',
+		page: 1,
+		per_page: 20
+	};
+	let getItemDetailParams: any = {
+		include_lookups: true,
+		use_display_id: true,
+		return_number_value: true,
+		format: '',
+		include_linked_items: true
+	};
+
 	let userOption = [curUser];
 	let selectedStatus: any = {};
 	let updateItemData: any = [];
 	let statusOption: any;
+	let isLoading = false;
 	console.log('curItemDetail', curItemDetail);
-	console.log('itemFields', itemFields);
-	console.log('item', item);
-	console.log('fieldTitle', title);
+	// console.log('itemFields', itemFields);
+	// console.log('item', item);
+	// console.log('fieldTitle', title);
 
 	const handleSelectStatus = (fieldId: string, e: any) => {
 		selectedStatus = statusOption.find((stt: any) => stt.status_id === e.detail);
@@ -42,24 +59,24 @@
 		selectedStatus = statusOption[0];
 	};
 
-	const handleChangeTextInput = (fieldId: string, e: any) => {
-		updateItemData[fieldId] = e.target?.value;
+	const getUpdateItemChangesMiddle = (field: any, e: any) => {
+		getUpdateItemChanges(field, e.target.value);
 	};
 
 	const handleUploadFile = async (e: any) => {
+		const field = itemFields.find((i: any) => i.data_type === 'file');
 		const file = e.target.files[0];
 		const filename = file.name;
 		const extension = file.type;
 		const toBase64File = await toBase64(file);
-		console.log('tobase64', toBase64File);
 		const payload = {
 			filename,
 			contentTypeFile: extension,
-			filepath: `${item.d_id}/${item.i_id}/${field.field_id}/${filename}`,
+			filepath: `${item.d_id}/${item.i_id}/${field.id}/${filename}`,
 			content: toBase64File,
 			d_id: item.d_id,
 			p_id: item.p_id,
-			field_id: field.field_id,
+			field_id: field.id,
 			item_id: item.i_id,
 			display_order: 0
 		} as ItemFileAttachmentPl;
@@ -69,26 +86,25 @@
 	};
 
 	const getUpdateItemChanges = async (field: any, value: any, deletedFiled?: string) => {
-		const keyArr = Object.keys(itemFields);
-		const keyFile = keyArr.find((i) => itemFields[i].data_type === 'file');
+		const keyArr = Object.keys(curItemDetail);
+		const keyFile = keyArr.find((keyF) => curItemDetail[keyF].dataType === 'file') as string;
+		const objectHasFile = curItemDetail[keyFile];
+		console.log('objectHasFile', objectHasFile);
 		let fileIds = [] as any;
-		// if (keyFile) {
-		// 	const objectHasFile = curItemDetail[keyFile as string];
-		// 	fileIds = (objectHasFile.value && objectHasFile.value.map((i: any) => i.file_id)) || [];
-		// }
+		if (objectHasFile) {
+			fileIds = objectHasFile.value.map((i: any) => i.file_id) || [];
+			console.log('fileIdsfileIds', fileIds);
+		}
 
 		const layoutSettings = await datastoreService.getDetail(item.d_id);
-		console.log('layoutSettings', layoutSettings);
 		const layoutFieldId = layoutSettings.field_layout.find((f: any) => f.id === field.id);
 		const fieldId = layoutSettings.fields.find((f: any) => f.id === field.id);
 
 		if (deletedFiled && !value) {
 			fileIds = fileIds.filter((f: any) => f.file_id !== deletedFiled);
 		}
+
 		const idx = field.field_index;
-
-		// const fieldId = itemFields.find((f: any) => f.field_id === field.id);
-
 		const tabindex = (layoutFieldId.row + 1) * 10 + layoutFieldId.col;
 		let objectChange = {};
 		if (field.data_type === 'file') {
@@ -128,11 +144,13 @@
 			};
 		}
 		updateItemData.push(objectChange);
-		console.log('updateItemData after update', updateItemData);
-		console.log('objectChange', objectChange);
 	};
 
+	const close = getClose();
+	const closeModal = () => close('!');
+
 	const updateItem = async () => {
+		isLoading = true;
 		const dsActions: DsAction[] = await datastoreService.getActions(item.d_id);
 		const updateId = dsActions.find(
 			(action) => action?.operation?.trim().toLowerCase() === 'update'
@@ -158,6 +176,23 @@
 			);
 		} catch (error) {
 			console.log(error);
+		} finally {
+			isLoading = false;
+			closeModal();
+		}
+	};
+
+	const deleteFile = async (file: any) => {
+		isLoading = true;
+		const field = itemFields.find((i: any) => i.data_type === 'file');
+		const fileId = file.file_id;
+		try {
+			await storageService.deleteFile(fileId);
+			await getUpdateItemChanges(field, '', file.file_id);
+		} catch (error) {
+			console.log(error);
+		} finally {
+			isLoading = false;
 		}
 	};
 
@@ -184,7 +219,7 @@
 								<input
 									id={field.id}
 									value={item[field.id]}
-									on:change={(e) => getUpdateItemChanges(field, e.target?.value)}
+									on:change={(e) => getUpdateItemChangesMiddle(field, e)}
 									placeholder={`Please enter ${field.display_name}`}
 									class="w-full rounded-md bg-slate-50 p-3"
 								/>
@@ -279,7 +314,7 @@
 										leaveTo="transform scale-95 opacity-0"
 									>
 										<ListboxOptions
-											class="absolute z-10 right-8 left-8 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+											class="absolute z-30 right-8 left-8 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
 										>
 											<ListboxOption value={curUser.id}>
 												<div class={'relative cursor-pointer select-none py-2 px-3'}>
@@ -296,14 +331,27 @@
 				<div class="my-6 flex flex-col gap-4">
 					{#each Object.keys(curItemDetail) as fieldKey (fieldKey)}
 						{#if curItemDetail[fieldKey].dataType === 'file'}
-							<input type="file" on:change={(e) => handleUploadFile(curItemDetail[fieldKey], e)} />
+							<input type="file" on:change={(e) => handleUploadFile(e)} />
 							{#if curItemDetail[fieldKey].value}
 								<div class="flex gap-3">
-									{#each curItemDetail[fieldKey].value as file}
-										<button type="button" class="px-2 py-1.5 rounded-md bg-orange-200">
-											{file.filename}
-										</button>
-									{/each}
+									{#if Array.isArray(curItemDetail[fieldKey].value)}
+										{#each curItemDetail[fieldKey].value as file}
+											<svelte.frameElement class="flex">
+												<button
+													type="button"
+													class="px-2 py-1.5 rounded-l-md bg-orange-200 max-w-32 overflow-ellipsis"
+												>
+													{file.filename}
+												</button>
+												<button
+													class="px-3 border hover:bg-orange-200 rounded-r-md"
+													on:click={() => deleteFile(file)}
+												>
+													<TrashIcon class="h-5 w-5" aria-hidden="true" />
+												</button>
+											</svelte.frameElement>
+										{/each}
+									{/if}
 								</div>
 							{/if}
 						{/if}
@@ -315,7 +363,7 @@
 		<div class="w-full flex justify-between items-center">
 			<button
 				type="button"
-				class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-md text-sm px-3 py-1 text-center"
+				class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-md text-sm px-6 py-2 text-center"
 				on:click={updateItem}>Save</button
 			>
 			<button

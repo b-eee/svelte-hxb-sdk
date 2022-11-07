@@ -5,4 +5,8 @@ const toBase64 = (file: any) =>
 		reader.onload = () => resolve(reader.result);
 		reader.onerror = (error) => reject(error);
 	});
-export { toBase64 };
+
+const clx = (...classes: string[]) => {
+	return classes.filter(Boolean).join(' ');
+};
+export { toBase64, clx };

@@ -3,10 +3,10 @@
 	import { page } from '$app/stores';
 	import List from '$lib/components/skeleton/List.svelte';
 	import Paragraph from '$lib/components/skeleton/Paragraph.svelte';
+	import { clx } from '$lib/helper';
 	import type { ItemFieldType } from '$lib/type/item';
 	import type { ApplicationAndDataStore } from '@hexabase/hexabase-js/dist/lib/types/application/response';
-	import type { DeleteItemReq, GetItemDetailPl } from '@hexabase/hexabase-js/dist/lib/types/item';
-	import { dialogs } from 'svelte-dialogs';
+	import type { GetItemDetailPl } from '@hexabase/hexabase-js/dist/lib/types/item';
 	import {
 		Disclosure,
 		DisclosureButton,
@@ -29,10 +29,14 @@
 		PencilAltIcon,
 		TrashIcon
 	} from '@rgossiaux/svelte-heroicons/outline';
-	import { applicationService, datastoreService, itemsService } from './+page';
-	import type { DsAction } from '@hexabase/hexabase-js/dist/lib/types/datastore';
-	import EditItem from './modal/EditItem.svelte';
+	import PlusCircle from '@rgossiaux/svelte-heroicons/outline/PlusCircle';
+	import { onMount } from 'svelte';
+	import { dialogs } from 'svelte-dialogs';
+	import { applicationService, datastoreService, itemsService, storageService } from './+page';
+	import CreateItem from './modal/CreateItem.svelte';
+	import CreateProject from './modal/CreateProject.svelte';
 	import DeleteItem from './modal/DeleteItem.svelte';
+	import EditItem from './modal/EditItem.svelte';
 
 	const { ws_id } = $page.params;
 	let loadingApp: boolean = false;
@@ -54,7 +58,7 @@
 	let isDeleteOpen = false;
 	let isUpdateOpen = false;
 	let fieldTitle = '';
-
+	let templates: any = {};
 	let getItemsParameters = {
 		use_or_condition: false,
 		sort_field_id: '',
@@ -149,39 +153,29 @@
 		await getItemDetail(field.d_id, field.i_id, field.p_id);
 	};
 
-	const deleteItem = async (item: any) => {
-		console.log('itemitemitem', item);
-		tableLoading = true;
-		const dsActions: DsAction[] = await datastoreService.getActions(curDatastoreId);
-		const actionIdDelete = dsActions.find(
-			(action) => action?.operation?.trim().toLowerCase() === 'delete'
-		)?.action_id;
-		if (actionIdDelete) {
-			const deleteItemReq: DeleteItemReq = {
-				a_id: actionIdDelete,
-				use_display_id: true,
-				delete_linked_items: true
-			};
-			await itemsService.deleteItem(curProjectId, curDatastoreId, item.i_id, deleteItemReq);
-		}
-
-		await fetchItems();
-		tableLoading = false;
-	};
-
 	const handleDeleteItem = async (item: any) => {
 		await dialogs.modal(DeleteItem, {
 			isDeleteOpen: isDeleteOpen,
-			curProjectId: curProjectId,
-			curDatastoreId: curDatastoreId,
 			fetchItems: fetchItems,
 			item: item
 		});
 	};
 
+	const downloadFile = async (file: any) => {
+		const res = await storageService.getFile(file.file_id);
+		if (res.data) {
+			let a = document.createElement('a');
+			const realData = res.data.split('/').slice(2).join('/');
+			a.href = `data:${file.contentType};base64,/${realData}`;
+			a.download = res.filename;
+			a.click();
+		}
+	};
+
 	const handleEditItem = async (item: any) => {
 		await getItemDetail(item.d_id, item.i_id, item.p_id);
 		await dialogs.modal(EditItem, {
+			isUpdateOpen: isUpdateOpen,
 			itemFields: itemFields,
 			statusOption: statusOption,
 			curUser: curUser,
@@ -190,12 +184,35 @@
 			title: fieldTitle
 		});
 	};
+
+	const handleCreateItem = async () => {
+		await dialogs.modal(CreateItem, {
+			curDatastoreId: curDatastoreId,
+			curProjectId: curProjectId,
+			fetchItems: fetchItems,
+			curUser: curUser
+		});
+	};
+
+	const handleCreateProject = async () => {
+		await dialogs.modal(CreateProject, {
+			categories: templates.categories,
+			fetchAppAndDs: fetchAppAndDs
+		});
+	};
+
+	onMount(async () => {
+		templates = await applicationService.getTemplates();
+	});
 </script>
 
 <div class="h-full gap-4 px-8 py-2 flex">
 	<div class="w-fit">
-		<div class="px-5 py-4 border-b border-gray-100">
+		<div class="px-5 py-4 border-b border-gray-100 flex justify-between">
 			<div class="font-semibold text-gray-800">Projects</div>
+			<button class="px-2" on:click={handleCreateProject}>
+				<PlusCircle class="w-5 h-5" />
+			</button>
 		</div>
 		<div class="shadow-md flex flex-col gap-8">
 			<div class="projects h-1/2">
@@ -305,8 +322,11 @@
 		{:else}
 			<div class="grid grid-cols-12 gap-4">
 				<div class="col-span-9">
-					<div class="px-5 py-4 border-b border-gray-100">
+					<div class="px-5 py-4 border-b border-gray-100 flex justify-between">
 						<div class="font-semibold text-gray-800">Datastore items</div>
+						<button class="bg-orange-200 rounded-md px-4 py-1.5" on:click={handleCreateItem}
+							>Create Item</button
+						>
 					</div>
 					<div class="shadow-md px-6 py-3">
 						{#if tableLoading}
@@ -318,42 +338,48 @@
 										class="text-left text-sm font-semibold uppercase text-gray-400 dark:text-white bg-gray-50 dark:bg-emerald-600"
 									>
 										<tr>
-											{#each itemFieldsExceptFile as itemFieldExceptFile}
-												<th scope="col" class="py-3 px-"> {itemFieldExceptFile.display_name} </th>
-											{/each}
+											{#if Array.isArray(itemFieldsExceptFile)}
+												{#each itemFieldsExceptFile as itemFieldExceptFile}
+													<th scope="col" class="py-3 px-"> {itemFieldExceptFile.display_name} </th>
+												{/each}
+											{:else}
+												<p>Data not available</p>
+											{/if}
 											<th>Action</th>
 										</tr>
 									</thead>
 									<tbody>
-										{#each items as item}
-											<tr
-												class="border-t-0 px-6 align-middle text-xs whitespace-nowrap p-4 text-blueGray-700 dark:bg-gray-800 dark:border-gray-700 text-left cursor-pointer hover:bg-amber-100"
-												on:keydown={() => handleClickRow(item)}
-												on:click={() => handleClickRow(item)}
-											>
-												{#each itemFieldsExceptFile as itemFieldExceptFile}
-													<td class="px-2 py-4 border-b-stone-500 text-sm">
-														{item[itemFieldExceptFile.id]}
+										{#if Array.isArray(items)}
+											{#each items as item}
+												<tr
+													class="border-t-0 px-6 align-middle text-xs whitespace-nowrap p-4 text-blueGray-700 dark:bg-gray-800 dark:border-gray-700 text-left cursor-pointer hover:bg-amber-100"
+													on:keydown={() => handleClickRow(item)}
+													on:click={() => handleClickRow(item)}
+												>
+													{#each itemFieldsExceptFile as itemFieldExceptFile}
+														<td class="px-2 py-4 border-b-stone-500 text-sm">
+															{item[itemFieldExceptFile.id]}
+														</td>
+													{/each}
+													<td>
+														<button
+															on:click|stopPropagation={() => handleDeleteItem(item)}
+															type="button"
+															class="bg-slate-200 rounded-lg text-sm px-2 py-1 text-center"
+														>
+															<TrashIcon class="h-5 w-5 text-red-400" />
+														</button>
+														<button
+															on:click|stopPropagation={() => handleEditItem(item)}
+															type="button"
+															class="bg-slate-200 rounded-lg text-sm px-2 py-1 text-center"
+														>
+															<PencilAltIcon class="h-5 w-5 text-emerald-500" />
+														</button>
 													</td>
-												{/each}
-												<td>
-													<button
-														on:click|stopPropagation={() => handleDeleteItem(item)}
-														type="button"
-														class="bg-slate-200 rounded-lg text-sm px-2 py-1 text-center"
-													>
-														<TrashIcon class="h-5 w-5" />
-													</button>
-													<button
-														on:click|stopPropagation={() => handleEditItem(item)}
-														type="button"
-														class="bg-slate-200 rounded-lg text-sm px-2 py-1 text-center"
-													>
-														<PencilAltIcon class="h-5 w-5" />
-													</button>
-												</td>
-											</tr>
-										{/each}
+												</tr>
+											{/each}
+										{/if}
 									</tbody>
 								{:else}
 									<div class="w-full h-full bg-white">
@@ -370,21 +396,35 @@
 					</div>
 					<div class="shadow-md h-full">
 						<TabGroup>
-							<TabList class="flex space-x-1 rounded-xl px-2 py-3">
-								<Tab let:selected class="px-3">
-									<button
-										class={`
-              'w-full rounded-lg py-2.5 font-bold leading-5 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2'
-			                ${selected ? 'bg-white shadow' : 'text-orange-500 '}
-						`}>Detail</button
-									>
+							<TabList class="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
+								<Tab
+									class={({ selected }) =>
+										clx(
+											'w-full rounded-lg py-1 text-sm font-medium leading-5 text-slate-800',
+											'ring-white focus:outline-none focus:ring-2',
+											selected
+												? 'bg-white shadow'
+												: 'text-slate-700 hover:bg-white/[0.12] hover:text-black'
+										)}
+									>Detail
 								</Tab>
-								<Tab>Files</Tab>
+								<Tab
+									class={({ selected }) =>
+										clx(
+											'w-full rounded-lg py-1 text-sm font-medium leading-5 text-slate-800',
+											'ring-white focus:outline-none focus:ring-2',
+											selected
+												? 'bg-white shadow'
+												: 'text-slate-700 hover:bg-white/[0.12] hover:text-black'
+										)}>Files</Tab
+								>
 							</TabList>
 							<TabPanels>
 								<TabPanel
-									class="rounded-xl bg-white p-3
-                ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2"
+									class="{clx(
+										'rounded-xl bg-white p-3',
+										'ring-white focus:outline-none focus:ring-2'
+									)}}"
 								>
 									{#if itemDetailLoading}
 										<List />
@@ -401,9 +441,11 @@
 													</li>
 												{:else if curItemDetail[i].dataType === 'user'}
 													<li class="px-3 py-2 bg-slate-100">Users</li>
-													{#each curItemDetail[i].value as userVal (userVal.user_id)}
-														<li class="px-3 py-2">{userVal.user_name}</li>
-													{/each}
+													{#if Array.isArray(curItemDetail[i].value)}
+														{#each curItemDetail[i].value as userVal (userVal.user_id)}
+															<li class="px-3 py-2">{userVal.user_name}</li>
+														{/each}
+													{/if}
 												{/if}
 											{/each}
 										</ul>
@@ -413,27 +455,35 @@
 									{#if itemDetailLoading}
 										<List />
 									{:else}
-										<ul>
-											{#each Object.keys(curItemDetail) as i (i)}
-												{#if curItemDetail[i].dataType === 'file'}
-													<div class="px-3">
-														{#each curItemDetail[i].value as file}
-															{#if typeof file === 'object'}
-																<div class="flex gap-2 items-end">
-																	<button
-																		type="button"
-																		class="text-white bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2"
-																		>{file.filename}</button
-																	>
-																	<div class="px-3 py-2 text-xs font-thin italic">
-																		size: {file.size}B
-																	</div>
-																</div>
+										<ul class="my-3">
+											{#if curItemDetail}
+												{#each Object.keys(curItemDetail) as i (i)}
+													{#if curItemDetail[i].dataType === 'file'}
+														<div class="px-3">
+															{#if Array.isArray(curItemDetail[i].value)}
+																{#each curItemDetail[i].value as file}
+																	{#if typeof file === 'object'}
+																		<div class="flex gap-2 items-end">
+																			<button
+																				type="button"
+																				class="text-white bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 max-w-md h-14"
+																				on:click={() => downloadFile(file)}
+																			>
+																				<p class="text-ellipsis overflow-hidden ... ">
+																					{file.filename}
+																				</p>
+																			</button>
+																			<div class="px-3 py-2 text-xs font-thin italic">
+																				size: {file.size}B
+																			</div>
+																		</div>
+																	{/if}
+																{/each}
 															{/if}
-														{/each}
-													</div>
-												{/if}
-											{/each}
+														</div>
+													{/if}
+												{/each}
+											{/if}
 										</ul>
 									{/if}
 								</TabPanel>
