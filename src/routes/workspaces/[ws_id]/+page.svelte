@@ -103,20 +103,20 @@
 		const res = await itemsService.getItems(curProjectId, curDatastoreId, getItemsParameters);
 		items = res.items;
 		loadingItems = false;
-		console.log('resresresresresres', res);
 		return res;
 	};
 
 	$: curDatastoreId && fetchItems();
 
 	const getDsDetail = async () => {
+		loadingItems = true;
 		const dsDetail = await datastoreService.getDetail(curDatastoreId);
 		itemFields = dsDetail.fields;
 		const curLayout = dsDetail.field_layout;
 		curUser = curLayout.find((u: any) => u.display_id === 'user_id');
 		curUser['user_name'] = 'current user';
 		itemFieldsExceptFile = itemFields.filter((i) => i.data_type !== 'file');
-		console.log('dsDetail', dsDetail);
+		loadingItems = false;
 	};
 
 	$: curDatastoreId && getDsDetail();
@@ -148,8 +148,7 @@
 		curDatastoreId = dsId;
 	};
 
-	const handleClickRow = async (field: any) => {
-		console.log('field', field);
+	const handleClickRow = async (field: any) => {	
 		await getItemDetail(field.d_id, field.i_id, field.p_id);
 	};
 
@@ -181,7 +180,8 @@
 			curUser: curUser,
 			item: item,
 			curItemDetail: curItemDetail,
-			title: fieldTitle
+			title: fieldTitle,
+			getItemDetailParams: getItemDetailParams
 		});
 	};
 

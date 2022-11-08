@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Paragraph from '$lib/components/skeleton/Paragraph.svelte';
 	import { toBase64 } from '$lib/helper';
 	import type { DsAction } from '@hexabase/hexabase-js/dist/lib/types/datastore';
 	import type { ItemFileAttachmentPl } from '@hexabase/hexabase-js/dist/lib/types/storage';
@@ -20,20 +21,7 @@
 	export let item: any = {};
 	export let title = '';
 	export let curItemDetail: any = {};
-
-	let getItemsParameters: any = {
-		use_or_condition: false,
-		sort_field_id: '',
-		page: 1,
-		per_page: 20
-	};
-	let getItemDetailParams: any = {
-		include_lookups: true,
-		use_display_id: true,
-		return_number_value: true,
-		format: '',
-		include_linked_items: true
-	};
+	export let getItemDetailParams: any = {};
 
 	let userOption = [curUser];
 	let selectedStatus: any = {};
@@ -64,6 +52,7 @@
 	};
 
 	const handleUploadFile = async (e: any) => {
+		isLoading = true;
 		const field = itemFields.find((i: any) => i.data_type === 'file');
 		const file = e.target.files[0];
 		const filename = file.name;
@@ -83,16 +72,19 @@
 		const createFileRes = await storageService.createFile(payload);
 		const newFileId = createFileRes.file_id;
 		await getUpdateItemChanges(field, newFileId);
+		await updateItem()
+		isLoading = false;
 	};
 
 	const getUpdateItemChanges = async (field: any, value: any, deletedFiled?: string) => {
+		isLoading = true;
 		const keyArr = Object.keys(curItemDetail);
 		const keyFile = keyArr.find((keyF) => curItemDetail[keyF].dataType === 'file') as string;
 		const objectHasFile = curItemDetail[keyFile];
 		console.log('objectHasFile', objectHasFile);
 		let fileIds = [] as any;
-		if (objectHasFile) {
-			fileIds = objectHasFile.value.map((i: any) => i.file_id) || [];
+		if (Array.isArray(objectHasFile.value)) {
+			fileIds = [...objectHasFile.value.map((i: any) => i.file_id)] || [];
 			console.log('fileIdsfileIds', fileIds);
 		}
 
@@ -100,8 +92,10 @@
 		const layoutFieldId = layoutSettings.field_layout.find((f: any) => f.id === field.id);
 		const fieldId = layoutSettings.fields.find((f: any) => f.id === field.id);
 
-		if (deletedFiled && !value) {
-			fileIds = fileIds.filter((f: any) => f.file_id !== deletedFiled);
+		if (deletedFiled) {
+			console.log("fileIdsfileIdsfileIdsfileIds", fileIds)
+			fileIds = fileIds.filter((f: any) => f !== deletedFiled);
+			console.log("fileIdsfileIdsfileIdsfileIds after filter", fileIds)
 		}
 
 		const idx = field.field_index;
@@ -144,6 +138,8 @@
 			};
 		}
 		updateItemData.push(objectChange);
+		console.log('updateItemData', updateItemData);
+		isLoading = false;
 	};
 
 	const close = getClose();
@@ -174,6 +170,8 @@
 				item.i_id,
 				itemActionParameters
 			);
+
+			item.rev_no = data.rev_no.rev_no
 		} catch (error) {
 			console.log(error);
 		} finally {
@@ -186,12 +184,14 @@
 		isLoading = true;
 		const field = itemFields.find((i: any) => i.data_type === 'file');
 		const fileId = file.file_id;
+		console.log('fileId when delete', fileId);
 		try {
 			await storageService.deleteFile(fileId);
 			await getUpdateItemChanges(field, '', file.file_id);
 		} catch (error) {
 			console.log(error);
 		} finally {
+			await updateItem();
 			isLoading = false;
 		}
 	};
@@ -201,180 +201,184 @@
 	});
 </script>
 
-<div class="flex flex-col gap-4">
-	<div class="text-lg font-bold text-center" id="dialog-title-id">Update Item</div>
-	<div class="text-center text-red-400 text-sm italic font-light">
-		You should choose an item first
-	</div>
-	<div class="w-full">
-		<div class="content flex flex-col gap-4">
-			<form>
-				{#each itemFields as field (field.id)}
-					<div>
-						{#if field.data_type === 'text'}
-							<div class="my-3 flex gap-4 justify-between items-center">
-								<label class="w-32 my-3 text-sm font-semibold" for={field.id}
-									>{field.display_name}</label
-								>
-								<input
-									id={field.id}
-									value={item[field.id]}
-									on:change={(e) => getUpdateItemChangesMiddle(field, e)}
-									placeholder={`Please enter ${field.display_name}`}
-									class="w-full rounded-md bg-slate-50 p-3"
-								/>
-							</div>
-						{:else if field.data_type === 'status'}
-							<div class="my-3 flex gap-4 justify-between items-center">
-								<label class="w-24 my-3 text-sm font-semibold" for={field.id}>status</label>
-								<Listbox
-									value={selectedStatus}
-									on:change={(e) => handleSelectStatus(field.id, e)}
-									horizontal={false}
-									class="bg-slate-50 cursor-pointer rounded-md overflow-hidden flex-1 z-20"
-								>
-									<ListboxButton
-										class="relative w-full cursor-pointer bg-slate-50 py-2 pl-3 pr-10 text-left shadow-md focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300"
+{#if isLoading}
+	<p>Processing...</p>
+{:else}
+	<div class="flex flex-col gap-4">
+		<div class="text-lg font-bold text-center" id="dialog-title-id">Update Item</div>
+		<div class="text-center text-red-400 text-sm italic font-light">
+			You should choose an item first
+		</div>
+		<div class="w-full">
+			<div class="content flex flex-col gap-4">
+				<form>
+					{#each itemFields as field (field.id)}
+						<div>
+							{#if field.data_type === 'text'}
+								<div class="my-3 flex gap-4 justify-between items-center">
+									<label class="w-32 my-3 text-sm font-semibold" for={field.id}
+										>{field.display_name}</label
 									>
-										<span class="block truncate">{selectedStatus?.displayed_name}</span>
-										<span
-											class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
-										>
-											<ChevronDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-										</span>
-									</ListboxButton>
-									<Transition
-										enter="transition duration-100 ease-out"
-										enterFrom="transform scale-95 opacity-0"
-										enterTo="transform scale-100 opacity-100"
-										leave="transition duration-75 ease-out"
-										leaveFrom="transform scale-100 opacity-100"
-										leaveTo="transform scale-95 opacity-0"
+									<input
+										id={field.id}
+										value={item[field.id]}
+										on:change={(e) => getUpdateItemChangesMiddle(field, e)}
+										placeholder={`Please enter ${field.display_name}`}
+										class="w-full rounded-md bg-slate-50 p-3"
+									/>
+								</div>
+							{:else if field.data_type === 'status'}
+								<div class="my-3 flex gap-4 justify-between items-center">
+									<label class="w-24 my-3 text-sm font-semibold" for={field.id}>status</label>
+									<Listbox
+										value={selectedStatus}
+										on:change={(e) => handleSelectStatus(field.id, e)}
+										horizontal={false}
+										class="bg-slate-50 cursor-pointer rounded-md overflow-hidden flex-1 z-20"
 									>
-										<ListboxOptions
-											class="absolute right-8 left-8 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+										<ListboxButton
+											class="relative w-full cursor-pointer bg-slate-50 py-2 pl-3 pr-10 text-left shadow-md focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300"
 										>
-											{#each statusOption as stt (stt.status_id)}
-												<ListboxOption
-													value={stt.status_id}
-													class={({ active }) =>
-														`relative cursor-pointer select-none py-2 px-3 ${
-															active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
-														}`}
-													let:selected
-												>
-													<div
-														class={`${selected ? 'bg-amber-100 text-amber-900' : 'text-gray-900'},
-                  'relative cursor-pointer select-none py-2 px-3`}
+											<span class="block truncate">{selectedStatus?.displayed_name}</span>
+											<span
+												class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+											>
+												<ChevronDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+											</span>
+										</ListboxButton>
+										<Transition
+											enter="transition duration-100 ease-out"
+											enterFrom="transform scale-95 opacity-0"
+											enterTo="transform scale-100 opacity-100"
+											leave="transition duration-75 ease-out"
+											leaveFrom="transform scale-100 opacity-100"
+											leaveTo="transform scale-95 opacity-0"
+										>
+											<ListboxOptions
+												class="absolute right-8 left-8 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+											>
+												{#each statusOption as stt (stt.status_id)}
+													<ListboxOption
+														value={stt.status_id}
+														class={({ active }) =>
+															`relative cursor-pointer select-none py-2 px-3 ${
+																active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
+															}`}
+														let:selected
 													>
-														<span
-															class={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
+														<div
+															class={`${selected ? 'bg-amber-100 text-amber-900' : 'text-gray-900'},
+                  'relative cursor-pointer select-none py-2 px-3`}
 														>
-															{stt.displayed_name}
-														</span>
-														{#if selected}
 															<span
-																class="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600"
+																class={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
 															>
-																<CheckIcon class="h-5 w-5" aria-hidden="true" />
+																{stt.displayed_name}
 															</span>
-														{/if}
+															{#if selected}
+																<span
+																	class="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600"
+																>
+																	<CheckIcon class="h-5 w-5" aria-hidden="true" />
+																</span>
+															{/if}
+														</div>
+													</ListboxOption>
+												{/each}
+											</ListboxOptions>
+										</Transition>
+									</Listbox>
+								</div>
+							{:else if field.data_type === 'users'}
+								<div class="my-3 flex gap-4 items-center justify-between">
+									<label class="w-24 my-3 text-sm font-semibold" for={field.id}>users</label>
+									<Listbox
+										value={curUser}
+										on:change={(e) => handleSelectUser(field, e)}
+										horizontal={false}
+										class="bg-slate-50 cursor-pointer rounded-md overflow-hidden flex-1"
+									>
+										<ListboxButton
+											class="relative w-full cursor-pointer bg-slate-50 py-2 pl-3 pr-10 text-left shadow-md focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300"
+										>
+											<span class="block truncate">current user</span>
+											<span
+												class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+											>
+												<ChevronDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+											</span>
+										</ListboxButton>
+										<Transition
+											enter="transition duration-100 ease-out"
+											enterFrom="transform scale-95 opacity-0"
+											enterTo="transform scale-100 opacity-100"
+											leave="transition duration-75 ease-out"
+											leaveFrom="transform scale-100 opacity-100"
+											leaveTo="transform scale-95 opacity-0"
+										>
+											<ListboxOptions
+												class="absolute z-30 right-8 left-8 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+											>
+												<ListboxOption value={curUser.id}>
+													<div class={'relative cursor-pointer select-none py-2 px-3'}>
+														<span> current user </span>
 													</div>
 												</ListboxOption>
-											{/each}
-										</ListboxOptions>
-									</Transition>
-								</Listbox>
-							</div>
-						{:else if field.data_type === 'users'}
-							<div class="my-3 flex gap-4 items-center justify-between">
-								<label class="w-24 my-3 text-sm font-semibold" for={field.id}>users</label>
-								<Listbox
-									value={curUser}
-									on:change={(e) => handleSelectUser(field, e)}
-									horizontal={false}
-									class="bg-slate-50 cursor-pointer rounded-md overflow-hidden flex-1"
-								>
-									<ListboxButton
-										class="relative w-full cursor-pointer bg-slate-50 py-2 pl-3 pr-10 text-left shadow-md focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300"
-									>
-										<span class="block truncate">current user</span>
-										<span
-											class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
-										>
-											<ChevronDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-										</span>
-									</ListboxButton>
-									<Transition
-										enter="transition duration-100 ease-out"
-										enterFrom="transform scale-95 opacity-0"
-										enterTo="transform scale-100 opacity-100"
-										leave="transition duration-75 ease-out"
-										leaveFrom="transform scale-100 opacity-100"
-										leaveTo="transform scale-95 opacity-0"
-									>
-										<ListboxOptions
-											class="absolute z-30 right-8 left-8 mt-1 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-										>
-											<ListboxOption value={curUser.id}>
-												<div class={'relative cursor-pointer select-none py-2 px-3'}>
-													<span> current user </span>
-												</div>
-											</ListboxOption>
-										</ListboxOptions>
-									</Transition>
-								</Listbox>
-							</div>
-						{/if}
-					</div>
-				{/each}
-				<div class="my-6 flex flex-col gap-4">
-					{#each Object.keys(curItemDetail) as fieldKey (fieldKey)}
-						{#if curItemDetail[fieldKey].dataType === 'file'}
-							<input type="file" on:change={(e) => handleUploadFile(e)} />
-							{#if curItemDetail[fieldKey].value}
-								<div class="flex gap-3">
-									{#if Array.isArray(curItemDetail[fieldKey].value)}
-										{#each curItemDetail[fieldKey].value as file}
-											<svelte.frameElement class="flex">
-												<button
-													type="button"
-													class="px-2 py-1.5 rounded-l-md bg-orange-200 max-w-32 overflow-ellipsis"
-												>
-													{file.filename}
-												</button>
-												<button
-													class="px-3 border hover:bg-orange-200 rounded-r-md"
-													on:click={() => deleteFile(file)}
-												>
-													<TrashIcon class="h-5 w-5" aria-hidden="true" />
-												</button>
-											</svelte.frameElement>
-										{/each}
-									{/if}
+											</ListboxOptions>
+										</Transition>
+									</Listbox>
 								</div>
 							{/if}
-						{/if}
+						</div>
 					{/each}
-				</div>
-			</form>
-		</div>
-		<hr class="my-3" />
-		<div class="w-full flex justify-between items-center">
-			<button
-				type="button"
-				class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-md text-sm px-6 py-2 text-center"
-				on:click={updateItem}>Save</button
-			>
-			<button
-				class="px-3 py-1 bg-slate-200 rounded-md"
-				on:click={() => {
-					isUpdateOpen = false;
-				}}>Cancel</button
-			>
+					<div class="my-6 flex flex-col gap-4">
+						{#each Object.keys(curItemDetail) as fieldKey (fieldKey)}
+							{#if curItemDetail[fieldKey].dataType === 'file'}
+								<input type="file" on:change={(e) => handleUploadFile(e)} />
+								{#if curItemDetail[fieldKey].value}
+									<div class="flex gap-3">
+										{#if Array.isArray(curItemDetail[fieldKey].value)}
+											{#each curItemDetail[fieldKey].value as file}
+												<div class="flex">
+													<button
+														type="button"
+														class="px-2 py-1.5 rounded-l-md bg-orange-200 max-w-32 overflow-ellipsis"
+													>
+														{file.filename}
+													</button>
+													<button
+														class="px-3 border hover:bg-orange-200 rounded-r-md"
+														on:click|stopPropagation={() => deleteFile(file)}
+													>
+														<TrashIcon class="h-5 w-5" aria-hidden="true" />
+													</button>
+												</div>
+											{/each}
+										{/if}
+									</div>
+								{/if}
+							{/if}
+						{/each}
+					</div>
+				</form>
+			</div>
+			<hr class="my-3" />
+			<div class="w-full flex justify-between items-center">
+				<button
+					type="button"
+					class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-md text-sm px-6 py-2 text-center"
+					on:click={updateItem}>Save</button
+				>
+				<button
+					class="px-3 py-1 bg-slate-200 rounded-md"
+					on:click={() => {
+						isUpdateOpen = false;
+					}}>Cancel</button
+				>
+			</div>
 		</div>
 	</div>
-</div>
+{/if}
 
 <style scoped>
 	:global(.dialog__container) {
