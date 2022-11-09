@@ -1,3 +1,4 @@
+import { goto } from '$app/navigation';
 import { createClient, HexabaseClient } from '@hexabase/hexabase-js';
 
 const url = import.meta.env.VITE_URL;
@@ -23,7 +24,11 @@ async function login(email: string, password: string) {
 }
 
 async function logout() {
+	const token = JSON.parse(localStorage.getItem('user')!).token;
+	const hexabase = await createClient({ url, token });
+	await hexabase.auth.logout(token);
 	localStorage.removeItem('user');
+	goto('/auth/login');
 }
 
 function register() {
