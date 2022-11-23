@@ -7,7 +7,7 @@
 
 	export let isDeleteOpen;
 	export let fetchItems: any;
-	export let item: any
+	export let item: any;
 
 	let isLoading = false;
 
@@ -17,7 +17,11 @@
 	const deleteItem = async () => {
 		console.log('itemitemitem', item);
 		isLoading = true;
-		const dsActions: DsAction[] = await datastoreService.getActions(item.d_id);
+		let dsActions: [DsAction] = [{}];
+		const res = await datastoreService.getActions(item.d_id);
+		if (res) {
+			dsActions = res;
+		}
 		const actionIdDelete = dsActions.find(
 			(action) => action?.operation?.trim().toLowerCase() === 'delete'
 		)?.action_id;

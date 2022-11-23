@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^4.5.0",
-		"@hexabase/hexabase-js": "^1.0.18",
+		"@hexabase/hexabase-js": "^1.1.1",
 		"@neoconfetti/svelte": "^1.0.0",
 		"@rgossiaux/svelte-headlessui": "^1.0.2",
 		"@rgossiaux/svelte-heroicons": "^0.1.2",

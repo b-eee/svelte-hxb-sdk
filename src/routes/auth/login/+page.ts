@@ -5,7 +5,7 @@ const url = import.meta.env.VITE_URL;
 async function login(email: string, password: string) {
 	console.log('import.meta', import.meta);
 	let user = {} as any;
-	const hexabase = await createClient({
+	const hexabase: HexabaseClient = await createClient({
 		url,
 		token: '',
 		email,
@@ -13,7 +13,7 @@ async function login(email: string, password: string) {
 	});
 	const { token, error } = await hexabase.auth.login({ email, password });
 	if (token && !error) {
-		const { userInfo, error } = await hexabase.users.get(token);
+		const { userInfo, error } = await hexabase.user.get(token);
 		if (userInfo && !error) {
 			user = userInfo;
 			user.token = token;

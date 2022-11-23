@@ -7,7 +7,7 @@ const url = import.meta.env.VITE_URL;
 
 async function initHxbClient() {
 	const token = JSON.parse(localStorage.getItem('user')!).token;
-	const hexabase = token && (await createClient({ url, token }));
+	const hexabase: HexabaseClient = token && (await createClient({ url, token }));
 	return hexabase;
 }
 
@@ -16,6 +16,6 @@ async function getWorkspaces() {
 	const hexabase = await initHxbClient();
 	console.log(hexabase);
 	console.log(hexabase);
-	const { workspaces, error } = await hexabase.workspaces.get();
+	const { workspaces, error } = await hexabase.workspace.get();
 	return workspaces;
 }

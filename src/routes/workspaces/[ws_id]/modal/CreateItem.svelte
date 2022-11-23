@@ -28,8 +28,8 @@
 
 	const getDsDetail = async () => {
 		const dsDetail = await datastoreService.getDetail(curDatastoreId);
-		itemFields = dsDetail.fields;
-		itemLayout = dsDetail.field_layout;
+		itemFields = dsDetail?.fields;
+		itemLayout = dsDetail?.field_layout;
 		console.log('dsDetail', dsDetail);
 	};
 
@@ -59,12 +59,16 @@
 		const createFileRes = await storageService.createFile(payload);
 		createItemParams[field.field_id] = [
 			...(createItemParams[field.field_id] || []),
-			createFileRes.file_id
+			createFileRes?.file_id
 		];
 	};
 
 	const createItem = async () => {
-		const dsActions: DsAction[] = await datastoreService.getActions(curDatastoreId);
+		let dsActions: [DsAction] = [{}];
+		const res = await datastoreService.getActions(curDatastoreId);
+		if (res) {
+			dsActions = res;
+		}
 		const actionIdCreate = dsActions.find(
 			(action) => action?.operation?.trim().toLowerCase() === 'new'
 		)?.action_id;
@@ -85,7 +89,7 @@
 		const newItem = await itemsService.createItem(curProjectId, curDatastoreId, newItemPl);
 		if (newItem) {
 			fetchItems();
-            closeModal()
+			closeModal();
 		}
 	};
 

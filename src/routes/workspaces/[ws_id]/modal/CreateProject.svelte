@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { clx } from '$lib/helper';
-	import type { CreateProjectPl } from '@hexabase/hexabase-js/dist/lib/types/application';
+	import type { CreateProjectPl } from '@hexabase/hexabase-js/dist/lib/types/project';
 	import {
 		RadioGroup,
 		RadioGroupLabel,
@@ -58,7 +58,7 @@
 		<RadioGroup value={curtemplateId} on:change={(e) => handleChangeTemplate(e)}>
 			<RadioGroupOption value="blank" let:checked class="my-4">
 				<span
-					class="{checked ? 'bg-slate-200' : 'bg-merald-400'} rounded-md cursor-pointer px-3 py-1.5"
+					class="{checked ? 'bg-slate-200' : 'bg-merald-400'} rounded-md cursor-pointer px-3 py-1.5 font-semibold"
 					>Blank</span
 				>
 				<div class="italic font-light text-sm py-3">A plain new project without any template</div>
@@ -90,11 +90,11 @@
 											<span
 												class="{checked
 													? 'bg-slate-200'
-													: 'bg-merald-400'} rounded-md cursor-pointer px-3 py-1.5"
+													: 'bg-merald-400'} rounded-md cursor-pointer px-3 py-1.5 font-semibold"
 												>{template.name}</span
 											>
 										</RadioGroupOption>
-										<div class="italic font-light text-sm py-3">{template.description}</div>
+										<div class="italic font-light text-xs py-3">{template.description}</div>
 									{/each}
 								</TabPanel>
 							{/each}

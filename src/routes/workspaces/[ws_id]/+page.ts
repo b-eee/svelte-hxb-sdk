@@ -1,5 +1,4 @@
 import { createClient, HexabaseClient } from '@hexabase/hexabase-js';
-import type { ApplicationAndDataStore } from '@hexabase/hexabase-js/dist/lib/types/application/response';
 import type {
 	CreateNewItemPl,
 	DeleteItemReq,
@@ -43,14 +42,14 @@ const url = import.meta.env.VITE_URL;
 
 async function initHxbClient() {
 	const token = JSON.parse(localStorage.getItem('user')!).token;
-	const hexabase = token && (await createClient({ url, token }));
+	const hexabase: HexabaseClient = token && (await createClient({ url, token }));
 	return hexabase;
 }
 
 //get projects and datastores
 async function getAppAndDs(id: string) {
 	const hexabase = await initHxbClient();
-	const { appAndDs, error } = await hexabase.applications.getProjectsAndDatastores(id);
+	const { appAndDs, error } = await hexabase.project.getProjectsAndDatastores(id);
 	if (appAndDs !== undefined) {
 		return appAndDs;
 	}
@@ -59,58 +58,58 @@ async function getAppAndDs(id: string) {
 //create project
 async function createApp(createProjectParams: any) {
 	const hexabase = await initHxbClient();
-	const { app, error } = await hexabase.applications.create(createProjectParams);
+	const { app, error } = await hexabase.project.create(createProjectParams);
 	return app?.project_id;
 }
 
 // get application
 async function getApplication(projectId: string) {
 	const hexabase = await initHxbClient();
-	const { project, error } = await hexabase.applications.get(projectId);
-	return project;
+	const { getApplications, error } = await hexabase.project.get(projectId);
+	return getApplications;
 }
 
 //get create application templates
 async function getTemplates() {
 	const hexabase = await initHxbClient();
-	const { getTemplates, error } = await hexabase.applications.getTemplates();
+	const { getTemplates, error } = await hexabase.project.getTemplates();
 	return getTemplates;
 }
 
 async function getFields(datastoreId: string, projectId: string) {
 	const hexabase = await initHxbClient();
-	const { dsFields, error } = await hexabase.datastores.getFields(datastoreId, projectId);
+	const { dsFields, error } = await hexabase.datastore.getFields(datastoreId, projectId);
 	return dsFields;
 }
 
 async function getDetail(datastoreId: string) {
 	const hexabase = await initHxbClient();
-	const { datastoreSetting, error } = await hexabase.datastores.getDetail(datastoreId);
+	const { datastoreSetting, error } = await hexabase.datastore.getDetail(datastoreId);
 	return datastoreSetting;
 }
 
 async function getField(fieldId: string, datastoreId: string) {
 	const hexabase = await initHxbClient();
-	const { dsField, error } = await hexabase.datastores.getField(fieldId, datastoreId);
+	const { dsField, error } = await hexabase.datastore.getField(fieldId, datastoreId);
 	return dsField;
 }
 
 async function getActions(datastoreId: string) {
 	const hexabase = await initHxbClient();
-	const { dsActions, error } = await hexabase.datastores.getActions(datastoreId);
+	const { dsActions, error } = await hexabase.datastore.getActions(datastoreId);
 	return dsActions;
 }
 
 async function getStatuses(datastoreId: string) {
 	const hexabase = await initHxbClient();
-	const { dsStatuses, error } = await hexabase.datastores.getStatuses(datastoreId);
+	const { dsStatuses, error } = await hexabase.datastore.getStatuses(datastoreId);
 	return dsStatuses;
 }
 
 //get datastore_item
 async function getItems(projectId: string, datastoreId: string, getItemsParameters: GetItemsPl) {
 	const hexabase = await initHxbClient();
-	const { dsItems, error } = await hexabase.items.get(getItemsParameters, datastoreId, projectId);
+	const { dsItems, error } = await hexabase.item.get(getItemsParameters, datastoreId, projectId);
 	return dsItems;
 }
 
@@ -122,7 +121,7 @@ async function getItemDetail(
 	itemDetailParams: GetItemDetailPl
 ) {
 	const hexabase = await initHxbClient();
-	const { itemDetails, error } = await hexabase.items.getItemDetail(
+	const { itemDetails, error } = await hexabase.item.getItemDetail(
 		datastoreId,
 		itemId,
 		projectId,
@@ -139,7 +138,7 @@ async function getHistories(
 	itemId: string
 ) {
 	const hexabase = await initHxbClient();
-	const { itemHistories, error } = await hexabase.items.getHistories(
+	const { itemHistories, error } = await hexabase.item.getHistories(
 		projectId,
 		datastoreId,
 		itemId,
@@ -151,21 +150,21 @@ async function getHistories(
 //create datastore_item id
 async function createItemId(datastoreId: string) {
 	const hexabase = await initHxbClient();
-	const { item_id, error } = await hexabase.items.createItemId(datastoreId);
+	const { item_id, error } = await hexabase.item.createItemId(datastoreId);
 	return item_id;
 }
 
 //create datastore_item
 async function createItem(projectId: string, datastoreId: string, newItemPl: CreateNewItemPl) {
 	const hexabase = await initHxbClient();
-	const { itemNew, error } = await hexabase.items.create(projectId, datastoreId, newItemPl);
+	const { itemNew, error } = await hexabase.item.create(projectId, datastoreId, newItemPl);
 	return itemNew;
 }
 
 //get datastore_item related
 async function getItemRelated(datastoreId: string, itemId: string, linkedDatastoreId: string) {
 	const hexabase = await initHxbClient();
-	const { itemLinked, error } = await hexabase.items.getItemRelated(
+	const { itemLinked, error } = await hexabase.item.getItemRelated(
 		datastoreId,
 		itemId,
 		linkedDatastoreId
@@ -181,12 +180,7 @@ async function deleteItem(
 	deleteItemReq: DeleteItemReq
 ) {
 	const hexabase = await initHxbClient();
-	const { data, error } = await hexabase.items.delete(
-		projectId,
-		datastoreId,
-		itemId,
-		deleteItemReq
-	);
+	const { data, error } = await hexabase.item.delete(projectId, datastoreId, itemId, deleteItemReq);
 	return data;
 }
 
@@ -198,7 +192,7 @@ async function updateItem(
 	itemActionParameters: ItemActionParameters
 ) {
 	const hexabase = await initHxbClient();
-	const { data, error } = await hexabase.items.update(
+	const { data, error } = await hexabase.item.update(
 		projectId,
 		datastoreId,
 		itemId,
@@ -221,6 +215,6 @@ async function createFile(payload: ItemFileAttachmentPl) {
 
 async function deleteFile(fileId: string) {
 	const hexabase = await initHxbClient();
-	const { data, error } = await hexabase.storage.delete({ fileId });
+	const { data, error } = await hexabase.storage.delete(fileId);
 	return data;
 }

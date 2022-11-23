@@ -21,7 +21,6 @@
 	export let item: any = {};
 	export let title = '';
 	export let curItemDetail: any = {};
-	export let getItemDetailParams: any = {};
 
 	let userOption = [curUser];
 	let selectedStatus: any = {};
@@ -70,9 +69,9 @@
 			display_order: 0
 		} as ItemFileAttachmentPl;
 		const createFileRes = await storageService.createFile(payload);
-		const newFileId = createFileRes.file_id;
+		const newFileId = createFileRes?.file_id;
 		await getUpdateItemChanges(field, newFileId);
-		await updateItem()
+		await updateItem();
 		isLoading = false;
 	};
 
@@ -89,54 +88,59 @@
 		}
 
 		const layoutSettings = await datastoreService.getDetail(item.d_id);
-		const layoutFieldId = layoutSettings.field_layout.find((f: any) => f.id === field.id);
-		const fieldId = layoutSettings.fields.find((f: any) => f.id === field.id);
+		const layoutFieldId = layoutSettings?.field_layout.find((f: any) => f.id === field.id);
+		const fieldId = layoutSettings?.fields.find((f: any) => f.id === field.id);
 
 		if (deletedFiled) {
-			console.log("fileIdsfileIdsfileIdsfileIds", fileIds)
+			console.log('fileIdsfileIdsfileIdsfileIds', fileIds);
 			fileIds = fileIds.filter((f: any) => f !== deletedFiled);
-			console.log("fileIdsfileIdsfileIdsfileIds after filter", fileIds)
+			console.log('fileIdsfileIdsfileIdsfileIds after filter', fileIds);
 		}
 
 		const idx = field.field_index;
-		const tabindex = (layoutFieldId.row + 1) * 10 + layoutFieldId.col;
-		let objectChange = {};
-		if (field.data_type === 'file') {
-			objectChange = {
-				as_title: fieldId?.as_title,
-				cols: layoutFieldId.size_x,
-				dataType: 'file',
-				id: field.id,
-				idx,
-				rowHeight: 'item.rowHeight',
-				rows: layoutFieldId.size_y,
-				status: fieldId.status,
-				tabindex,
-				title: title,
-				unique: fieldId?.unique,
-				x: layoutFieldId.col,
-				y: layoutFieldId.row,
-				post_file_ids: value ? [...fileIds, value] : [...fileIds],
-				value: value ? [...fileIds, value] : [...fileIds]
-			};
-		} else {
-			objectChange = {
-				as_title: fieldId?.as_title,
-				cols: layoutFieldId.size_x,
-				dataType: fieldId.data_type,
-				id: field.id,
-				idx,
-				rowHeight: 'item.rowHeight',
-				rows: layoutFieldId.size_y,
-				status: fieldId.status,
-				tabindex,
-				title: title,
-				unique: fieldId?.unique,
-				value,
-				x: layoutFieldId.col,
-				y: layoutFieldId.row
-			};
+		let tabindex;
+		let objectChange;
+		if (layoutFieldId && fieldId) {
+			tabindex = (layoutFieldId.row + 1) * 10 + layoutFieldId.col;
+			let objectChange = {};
+			if (field.data_type === 'file') {
+				objectChange = {
+					as_title: fieldId?.as_title,
+					cols: layoutFieldId.size_x,
+					dataType: 'file',
+					id: field.id,
+					idx,
+					rowHeight: 'item.rowHeight',
+					rows: layoutFieldId.size_y,
+					status: fieldId.status,
+					tabindex,
+					title: title,
+					unique: fieldId?.unique,
+					x: layoutFieldId.col,
+					y: layoutFieldId.row,
+					post_file_ids: value ? [...fileIds, value] : [...fileIds],
+					value: value ? [...fileIds, value] : [...fileIds]
+				};
+			} else {
+				objectChange = {
+					as_title: fieldId?.as_title,
+					cols: layoutFieldId.size_x,
+					dataType: fieldId.data_type,
+					id: field.id,
+					idx,
+					rowHeight: 'item.rowHeight',
+					rows: layoutFieldId.size_y,
+					status: fieldId.status,
+					tabindex,
+					title: title,
+					unique: fieldId?.unique,
+					value,
+					x: layoutFieldId.col,
+					y: layoutFieldId.row
+				};
+			}
 		}
+
 		updateItemData.push(objectChange);
 		console.log('updateItemData', updateItemData);
 		isLoading = false;
@@ -147,7 +151,11 @@
 
 	const updateItem = async () => {
 		isLoading = true;
-		const dsActions: DsAction[] = await datastoreService.getActions(item.d_id);
+		let dsActions: [DsAction] = [{}];
+		const res = await datastoreService.getActions(item.d_id);
+		if (res) {
+			dsActions = res;
+		}
 		const updateId = dsActions.find(
 			(action) => action?.operation?.trim().toLowerCase() === 'update'
 		)?.action_id;
@@ -170,8 +178,6 @@
 				item.i_id,
 				itemActionParameters
 			);
-
-			item.rev_no = data.rev_no.rev_no
 		} catch (error) {
 			console.log(error);
 		} finally {

@@ -5,8 +5,8 @@
 	import Paragraph from '$lib/components/skeleton/Paragraph.svelte';
 	import { clx } from '$lib/helper';
 	import type { ItemFieldType } from '$lib/type/item';
-	import type { ApplicationAndDataStore } from '@hexabase/hexabase-js/dist/lib/types/application/response';
 	import type { GetItemDetailPl } from '@hexabase/hexabase-js/dist/lib/types/item';
+	import type { ApplicationAndDataStore } from '@hexabase/hexabase-js/dist/lib/types/project';
 	import {
 		Disclosure,
 		DisclosureButton,
@@ -90,7 +90,11 @@
 
 	const fetchAppAndDs = (async () => {
 		loadingApp = true;
-		const appAndDs: [ApplicationAndDataStore] = await applicationService.getAppAndDs(ws_id);
+		let appAndDs: [ApplicationAndDataStore] = [{}];
+		const res = await applicationService.getAppAndDs(ws_id);
+		if (res) {
+			appAndDs = res;
+		}
 		appAndDsArray = appAndDs;
 		currentApp = appAndDs[0];
 		curProjectId = currentApp.application_id!;
@@ -101,7 +105,7 @@
 	const fetchItems = async () => {
 		loadingItems = true;
 		const res = await itemsService.getItems(curProjectId, curDatastoreId, getItemsParameters);
-		items = res.items;
+		items = res?.items;
 		loadingItems = false;
 		return res;
 	};
@@ -111,12 +115,14 @@
 	const getDsDetail = async () => {
 		loadingItems = true;
 		const dsDetail = await datastoreService.getDetail(curDatastoreId);
-		itemFields = dsDetail.fields;
-		const curLayout = dsDetail.field_layout;
-		curUser = curLayout.find((u: any) => u.display_id === 'user_id');
-		curUser['user_name'] = 'current user';
-		itemFieldsExceptFile = itemFields.filter((i) => i.data_type !== 'file');
-		loadingItems = false;
+		if (dsDetail) {
+			itemFields = dsDetail.fields;
+			const curLayout = dsDetail.field_layout;
+			curUser = curLayout.find((u: any) => u.display_id === 'user_id');
+			curUser['user_name'] = 'current user';
+			itemFieldsExceptFile = itemFields.filter((i) => i.data_type !== 'file');
+			loadingItems = false;
+		}
 	};
 
 	$: curDatastoreId && getDsDetail();
@@ -124,11 +130,13 @@
 	const getItemDetail = async (ds_id: string, item_id: string, project_id: string) => {
 		itemDetailLoading = true;
 		const res = await itemsService.getItemDetail(ds_id, item_id, project_id, getItemDetailParams);
-		curLayout = res.field_layout;
-		curItemDetail = res.field_values;
-		fieldTitle = res.title;
-		statusOption = res.status_list;
-		itemDetailLoading = false;
+		if (res) {
+			curLayout = res.field_layout;
+			curItemDetail = res.field_values;
+			fieldTitle = res.title as string;
+			statusOption = res.status_list;
+			itemDetailLoading = false;
+		}
 	};
 
 	const handleSelectApp = (e: CustomEvent<any>) => {
@@ -148,7 +156,7 @@
 		curDatastoreId = dsId;
 	};
 
-	const handleClickRow = async (field: any) => {	
+	const handleClickRow = async (field: any) => {
 		await getItemDetail(field.d_id, field.i_id, field.p_id);
 	};
 
@@ -162,11 +170,11 @@
 
 	const downloadFile = async (file: any) => {
 		const res = await storageService.getFile(file.file_id);
-		if (res.data) {
+		if (res && res.data) {
 			let a = document.createElement('a');
 			const realData = res.data.split('/').slice(2).join('/');
 			a.href = `data:${file.contentType};base64,/${realData}`;
-			a.download = res.filename;
+			a.download = res.filename as string;
 			a.click();
 		}
 	};
